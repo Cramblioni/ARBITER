@@ -1,0 +1,42 @@
+set c 0
+
+ref a [
+	get a a
+	get b b
+	set c 0
+	invoke ready ~
+	await go
+	while a > 0 [
+		set c c + b
+		set a a - 1
+	]
+	ext set p1 c
+	end
+]
+
+ref b [
+	get a b
+	get b a
+	set c 0
+	invoke ready ~
+	await go
+	while a > 0 [
+		set c c + b
+		set a a - 1
+	]
+	ext set p2 c
+	end
+]
+
+event ready [
+	single [
+		set c c + 1
+		if c = 2 [ invoke go ]
+	]
+]
+
+set a 2
+set b 10
+create a
+create b
+end

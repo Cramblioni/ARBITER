@@ -56,7 +56,7 @@ class bExecutor:
     self.code = scd(model)
     self.env = {}
     self.ext = ext
-    update(self.code,self.env) ; self.d = 0
+    update_bank(self.code,self.env) ; self.d = 0
     self.eout = [] # this is for queing up events to be invoked elsewhere
     self.estack = [[iter(self.code.body)]] # execution stack Stores what body is being executed
     self.astack = [None] # await stack [stores if that execution level is waiting]
@@ -185,16 +185,18 @@ class aExecutor(bExecutor):
     for i,p in enumerate(self.procs):
       if not next(p): delb.append(i)
       self.eout.extend(p.eout)
+      p.eout.clear()
+      
     for i in delb[::-1]: self.procs.pop(i)
-
     oevs = []
     for i in self.eout:
       if i.scope == 2:
+        #print(i.id)
         self._invoke(i.id)
       else:
         oevs.append(i.id)
     for i in set(oevs):
-      for p in self.procs: p._invoke(i)
+      for p in self.procs: p._invoke(Name(i))
 
     self.eout.clear()
     

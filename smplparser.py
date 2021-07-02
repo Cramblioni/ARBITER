@@ -66,7 +66,7 @@ def lexer(txt):
     elif cc == "." or cc.isdigit() : out.append(eNum())
     elif cc == "[": out.append(OCB()) ; cc = next(itr,None)
     elif cc == "]": out.append(CCB()) ; cc = next(itr,None)
-    elif cc in "+=-*/,()<>&|_¬": out.append(cc) ; cc = next(itr,None)
+    elif cc in "+=-*/,()<>&|_~": out.append(cc) ; cc = next(itr,None)
   return out
 
 ## Syntax Classes
@@ -273,7 +273,7 @@ def sParse(tokstream,penv = {},callback=None):
       body,_ = sParse(itr,penv)
       body = body.body
       cc = next(itr,None)
-      if cc and (cc.wrd == "else" and peek(itr) == OCB()):
+      if isinstance(cc,Name) and (cc.wrd == "else" and peek(itr) == OCB()):
         cc = next(itr,None)
         orelse,_ = sParse(itr,penv)
         orelse = orelse.body
@@ -286,8 +286,8 @@ def sParse(tokstream,penv = {},callback=None):
       out.append(c_await(ident))
     elif cc.wrd == "invoke":
       ident,cc = next(itr,None),next(itr,None)
-      if cc in ["_","*","¬"]:
-        out.append(c_invoke(ident.wrd,"*¬_".index(cc) + 1))
+      if cc in ["_","*","~"]:
+        out.append(c_invoke(ident.wrd,"*~_".index(cc) + 1))
         cc = next(itr,None)
       else :out.append(c_invoke(ident.wrd,1))
     elif cc.wrd == "event":
@@ -342,11 +342,13 @@ def aParse(tokstream,penv = {}):
   codebod = c_arbiter({},[],{})
   sap,_ = sParse(itr,penv,asCallback)
   codebod.body = sap.body
-  codebod.events = sap.event
+  codebod.event = sap.event
   return codebod,penv
       
 def update(node,env):
-  nd = node.__dict__
+  try:
+    nd = node.__dict__
+  except AttributeError: return
   if "env" in nd:
     nd.update({"env":env})
   else:
@@ -359,7 +361,12 @@ def update(node,env):
             update(d,env)
           except AttributeError: pass
 
-  
+def update_bank(bank,env): # specially for updating codebanks
+  for i in bank.body:
+    update(i,env)
+  for e in bank.event.values():
+    for i in e:update(i,env)
+    
 def scd(dic):
   if isinstance(dic,dict):
     out = dict.fromkeys(dic.keys())
