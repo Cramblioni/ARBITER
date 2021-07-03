@@ -155,6 +155,8 @@ class bExecutor:
         self.d = tmp # pretend this never happened
       if ct == c_end:
         self.running = False
+      if ct == c_print:
+        print(*map(lambda x:x.Solve(),node.msg))
 
   def __next__(self):
     n = self._getnext()

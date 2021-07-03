@@ -15,6 +15,7 @@ class Name:
 @dataclass(frozen=True)
 class String:
   value:str
+  def Solve(self):return self.value
 @dataclass(frozen=True)
 class Number:
   value:float
@@ -158,6 +159,10 @@ class c_arbiter:
   body:list
   event:dict
 
+## other
+@dataclass()
+class c_print:
+  msg:list
 ## now onto parsing
 
 
@@ -306,6 +311,16 @@ def sParse(tokstream,penv = {},callback=None):
     elif cc.wrd == "end":
       out.append(c_end())
       cc = next(itr,None)
+    elif cc.wrd == "print":
+      msgs = []
+      cc = next(itr,None)
+      if isinstance(cc,String): msgs.append(cc) ; cc = next(itr,None)
+      else:msgs.append(_parseExpr())
+      while cc and cc == ",":
+        cc = next(itr,None)
+        if isinstance(cc,String): msgs.append(cc) ; cc = next(itr,None)
+        else:msgs.append(_parseExpr())
+      out.append(c_print(msgs))
     else:
       if callback:
         cc = callback(cc,itr,penv,out)
