@@ -59,10 +59,17 @@ def lexer(txt):
         tmp+=cc
       cc = next(itr,None)
     return Number(float(tmp))
+  def strip_comment():
+    nonlocal itr,cc
+    tmp = next(itr,None)
+    while tmp and tmp != "#":
+      tmp = next(itr,None)
+    cc = next(itr,None)
   ## mainloop
   while cc:
     if cc in " \t\n" : cc = next(itr,None)
     elif cc.isalpha(): out.append(eName())
+    elif cc == "#": strip_comment()
     elif cc == "\""  : out.append(eStr())
     elif cc == "." or cc.isdigit() : out.append(eNum())
     elif cc == "[": out.append(OCB()) ; cc = next(itr,None)
@@ -152,7 +159,7 @@ class c_bank:
 @dataclass()
 class c_create:
   bid:str
-  alias:str
+  iev:str
 @dataclass()
 class c_arbiter:
   banks:dict
@@ -165,10 +172,10 @@ class c_print:
   msg:list
 ## now onto parsing
 
-
       
 def sParse(tokstream,penv = {},callback=None):
   ## simple Parser [used for individual banks]
+  
   itr = iter(tokstream)
   cc = next(itr,None)
   assert cc
@@ -195,7 +202,7 @@ def sParse(tokstream,penv = {},callback=None):
       if "result" in locals():
         return result
       else:
-        print(cc)
+        #print(cc)
         assert False
     def mad():
       nonlocal itr,cc
@@ -247,23 +254,26 @@ def sParse(tokstream,penv = {},callback=None):
   codebod = c_bank([],{})
   out = codebod.body
   while cc and (cc != CCB()):
+    #print(cc)
     assert isinstance(cc,Name)
     #print(cc.wrd)
     if   cc.wrd == "set":
       trg= next(itr)
       cc= next(itr)
-      val = _parseExpr()
+      if isinstance(cc,String): val = cc ; cc = next(itr,None)
+      else:val =_parseExpr()
       out.append(c_set(trg,val))
     elif cc.wrd == "ext" and peek(itr).wrd == "set":
       cc = next(itr,None)
       trg= next(itr)
       cc= next(itr)
-      val = _parseExpr()
+      if isinstance(cc,String): val = cc ; cc = next(itr,None)
+      else:val =_parseExpr()
       out.append(c_set(trg,val,True))
     elif cc.wrd == "single":
       cc = next(itr,None)
       assert cc == OCB()
-      body,_ = sParse(itr,penv)
+      body,_ = sParse(itr,penv,callback)
       cc = next(itr,None)
       out.append(c_single(body.body))
     elif cc.wrd == "get":
@@ -275,12 +285,12 @@ def sParse(tokstream,penv = {},callback=None):
       cc = next(itr,None)
       cond = _parseCond()
       assert cc == OCB()
-      body,_ = sParse(itr,penv)
+      body,_ = sParse(itr,penv,callback)
       body = body.body
       cc = next(itr,None)
       if isinstance(cc,Name) and (cc.wrd == "else" and peek(itr) == OCB()):
         cc = next(itr,None)
-        orelse,_ = sParse(itr,penv)
+        orelse,_ = sParse(itr,penv,callback)
         orelse = orelse.body
         cc = next(itr,None)
       else:
@@ -298,14 +308,14 @@ def sParse(tokstream,penv = {},callback=None):
     elif cc.wrd == "event":
       ident,cc = next(itr,None),next(itr,None)
       assert cc == OCB()
-      body,_ = sParse(itr,penv)
+      body,_ = sParse(itr,penv,callback)
       body = body.body
       codebod.event.update({ident.wrd:body})
       cc = next(itr,None)
     elif cc.wrd == "while":
       cc = next(itr,None)
       cond = _parseCond()
-      body,_ = sParse(itr,penv)
+      body,_ = sParse(itr,penv,callback)
       out.append(c_while(cond,body.body))
       cc = next(itr,None)
     elif cc.wrd == "end":
@@ -332,15 +342,72 @@ def aParse(tokstream,penv = {}):
   ## arbiters parser [for parsing piky bollocks]
   itr = iter(tokstream)
   # just some subfunctions
+  cc = None
+  def _parseExpr():
+    nonlocal itr,cc,penv
+    def indiv():
+      nonlocal itr,cc,penv
+      if isinstance(cc,Number):
+        result = cc
+        cc = next(itr,None)
+      elif isinstance(cc,Name):
+          result = refOp(cc.wrd,penv)
+          cc = next(itr,None)
+      elif cc == "(":
+        result = pam()
+        assert cc == ")"
+        cc = next(itr,None)
+      elif cc in ["+","-"]:
+        op = cc
+        cc = next(itr,None)
+        result = unOp(indiv(),op)
+        cc = next(itr,None)
+      if "result" in locals():
+        return result
+      else:
+        #print(cc)
+        assert False
+    def mad():
+      nonlocal itr,cc
+      result = indiv()
+      while cc and cc in ["*","/"]:
+        op = cc
+        cc = next(itr,None)
+        result = biOp(result,indiv(),op)
+      #print("endo loop")
+      return result
+
+    result = mad()
+    while cc and cc in ["+","-"]:
+      op = cc
+      cc = next(itr,None)
+      result = biOp(result,mad(),op)
+    return result
+#
   def asCallback(sfcc,sfitr,sfenv,sfoa):
-    nonlocal itr
+    nonlocal itr,cc
     cc=None
     if sfcc.wrd == "create":
       tmp = next(itr)
       cc = next(itr,None)
-      if isinstance(cc,Name) and cc.wrd == "using":
-        nm,cc = next(itr),next(itr,None)
-        sfoa.append(c_create(nm,tmp))
+      if isinstance(cc,Name) and cc.wrd == "with":
+
+        ipar = []
+        trg,_ = next(itr),next(itr,None)
+        cc = next(itr,None)
+        if isinstance(cc,String):val,cc = cc,next(itr,None)
+        else:val = _parseExpr()
+        ipar.append( (trg.wrd,val))
+          
+        while cc == ",":
+          trg,_ = next(itr),next(itr,None)
+          cc = next(itr,None)
+          if isinstance(cc,String):val,cc = cc,next(itr,None)
+          else:val = _parseExpr()
+          ipar.append( (trg.wrd,val))
+        
+        sfoa.append(c_create(tmp,ipar))
+        
       else:
         sfoa.append(c_create(tmp,None))
         
@@ -366,6 +433,9 @@ def update(node,env):
   except AttributeError: return
   if "env" in nd:
     nd.update({"env":env})
+  elif "iev" in nd:
+    for n,v in nd.get("iev"):
+      update(v,env)
   else:
     for f,d in nd.items():
       if f != "banks":

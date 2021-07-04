@@ -174,7 +174,14 @@ class aExecutor(bExecutor):
   def _extr(self,node):
     ct = type(node)
     if ct == c_create:
-      self.procs.append(bExecutor(self.banks.get(node.bid.wrd),self.env))
+      if node.iev:
+        bank = self.banks.get(node.bid.wrd)
+        vals = map(lambda x:(x[0],x[1].Solve()),node.iev)     
+        exer = bExecutor(bank,self.env)
+        exer.env.update(vals)
+        self.procs.append(exer)
+      else:
+        self.procs.append(bExecutor(self.banks.get(node.bid.wrd),self.env))
       return False
     return True
 
