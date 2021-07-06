@@ -1,0 +1,17 @@
+reference a [ # `ref` and `reference` are interchangeable # 
+	invoke first 
+	await second 
+	print "first" # this gets printed last #
+	end
+]
+ref b [
+	await first
+	print "second" # this one is true #
+	invoke second
+	end
+]
+
+print "last" # this will be printed first #
+create b
+create a
+end
