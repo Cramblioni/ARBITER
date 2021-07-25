@@ -762,7 +762,6 @@ class ARBITER(Executer):
 
  
 if __name__ == "__main__":
-  print("LOADING MAIN MODULES THEN RUNLINE PARSING",file=vf)
   backend = Backend()
   #backend.loadModule(".\pclasses.py",True)
   prog_t = r"""
