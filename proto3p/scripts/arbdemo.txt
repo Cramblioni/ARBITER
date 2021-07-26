@@ -1,0 +1,8 @@
+set x 1
+set y 1
+print "Hello, World!"
+print x + y
+set x "Goodbye," set y " World."
+print x + y
+print x, y
+end

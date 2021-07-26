@@ -1,0 +1,35 @@
+union msg
+
+  ref echoer [
+    register _ response REPLY
+    [
+      recieve REPLY reply
+      unpack reply host,reply
+      print pid,"recieved", reply
+      invoke msgsent ~
+      end
+    ]
+    print pid,"sending",dat
+    msg host ECHO data dat
+  ] using msg
+
+  ref server [
+    register host response ECHO [
+      single [
+        recieve ECHO dave
+        unpack dave sender, name
+        print "echoing",name,sender
+        msgv sender REPLY data name
+      ]
+    ]
+    await kill
+    end
+  ] using msg
+
+  create server
+  create echoer with dat = "Hello, World!"
+  create echoer with dat = "Goodbye, World."
+  await msgsent
+  await msgsent
+  invoke kill
+  end

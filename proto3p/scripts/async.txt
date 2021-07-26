@@ -1,0 +1,11 @@
+
+ref first  [ await last print "last" end ]
+ref second [ await first print "first" invoke second end]
+ref last   [ await second print "second" invoke last end]
+
+create first
+create second
+create last
+
+invoke first
+end

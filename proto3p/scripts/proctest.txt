@@ -1,0 +1,15 @@
+ref spammer [
+	await go
+	print "Hello, World! number", i
+	end
+]
+
+single [
+	set n 100
+	while n > 0 [
+		create spammer with i = n
+		set n n - 1
+	]
+]
+invoke go
+end

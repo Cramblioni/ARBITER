@@ -26,6 +26,7 @@ class vfile:
     self.cont += data
   def print(self):
     print(self.cont.expandtabs(8),end="")
+    self.cont = ""
 vf = vfile() 
 
 from dataclasses import dataclass
@@ -508,8 +509,8 @@ def a_parse_single(itr,pps):
       outpars.extend([None for i in v])
   return outtype,outpars
 
-def a_parse(tokenstream,pps):
-  global backend
+def a_parse(tokenstream,pps,backend):
+  #global backend
   #print("PARSERSET",*pps,sep="\n\t")
   itr = liter(tokenstream)
   out = []
@@ -518,6 +519,8 @@ def a_parse(tokenstream,pps):
       ncom,params = a_parse_single(itr,pps)
     except StopIteration:
      break
+    except AssertionError:
+      raise SyntaxError
     else:
       if ncom == None: continue
       else :
@@ -554,10 +557,13 @@ Roles include:
     return lambda txt: i_parse(i_lexer(txt))
   
   def getParser(self):
-    cntx = self.BASE
-    if self.mode == 0: cntx = self.BASE_ARBITER
-    elif self.setcntx[-1]: cntx.extend(self.extra.get(self.setcntx[-1],[]))
-    return lambda toks:a_parse(toks,cntx)
+    
+    cntx = self.BASE[:]
+    if self.mode == 0: cntx = self.BASE_ARBITER#;print("\tgetting parser using ARBITER set")
+    elif self.setcntx[-1]:
+      cntx.extend(self.extra.get(self.setcntx[-1],[]))
+      #print("\tgetting parser using",self.setcntx[-1],"set")
+    return lambda toks:a_parse(toks,cntx,self)
 
   def setParserMode(self,mode):
     self.mode = mode
@@ -601,7 +607,7 @@ Roles include:
         print("ARB\tloading",comcla,end="...",file=vf)
         if tmp:
           globals().update({comcla:tmp})
-          print("success",file=vf)
+          print("Success",file=vf)
         else: raise ImportError
 
     venv.get("module_init")(self)
@@ -632,6 +638,7 @@ class Executer: # base class for executing code
 
   def initialise(self,code):
     self.__delbuff.append([])
+    
     temp = code[:]
     for self.__ind,x in enumerate(temp):
       x.on_Init(self.arb,self)
@@ -762,13 +769,50 @@ class ARBITER(Executer):
 
  
 if __name__ == "__main__":
-  print("LOADING MAIN MODULES THEN RUNLINE PARSING",file=vf)
   backend = Backend()
   #backend.loadModule(".\pclasses.py",True)
   prog_t = r"""
 
-            
-            end
+  union msg
+
+  ref echoer [
+    register _ response REPLY
+    [
+      recieve REPLY reply
+      unpack reply host,reply
+      print pid,"recieved", reply
+      invoke msgsent ~
+      end
+    ]
+
+    print pid,"sending",dat
+    msg host ECHO data dat
+
+  ] using msg
+
+  ref server [
+
+    register host response ECHO [
+      single [
+        recieve ECHO dave
+        unpack dave sender, name
+        print "echoing",name,sender
+        msgv sender REPLY data name
+      ]
+    ]
+
+    await kill
+    end
+
+  ] using msg
+
+  create server
+  create echoer with dat = "Hello, World!"
+  create echoer with dat = "Goodbye, World."
+  await msgsent
+  await msgsent
+  invoke kill
+  end
             """
 
   prog = a_lexer(prog_t)
@@ -777,7 +821,10 @@ if __name__ == "__main__":
   res = parser(prog)
   exe = ARBITER(res,backend)
   print(prog_t,sep="\n",file=vf)
-  vf.print()
+  #vf.print()
+  vf.cont = ""
+  print("\n")
   while next(exe):
+    #print(exe.env,*map(lambda x:x.env,exe.procs),sep="\n\t")
     print(exe.aout.cont,end="")
     exe.aout.cont = ""

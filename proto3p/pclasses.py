@@ -196,7 +196,7 @@ event:&£;
 end:;
 """
 
-syntax_a = pc_arbiter = """
+syntax_a = """
   ref:&£:using&;
   create:&:with[&~=*];
   union:&:as&;
