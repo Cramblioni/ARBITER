@@ -547,6 +547,7 @@ Roles include:
     self.mode = 0 # ARB
     self.PATH = [".\\",
                  ".\\MODS\\"]
+    self.arbextf = []
     self.bout = vf
     self.getnloadModule("pclasses", True)
     
@@ -574,6 +575,8 @@ Roles include:
   def unsetParserSet(self):
     self.setcntx.pop()
 
+  def registerARBITERtickfunc(self,func):
+    self.arbextf.append(func)
   
   def loadModule(self,path,B=False):
     global vf
@@ -730,7 +733,7 @@ class ARBITER(Executer):
     self.backend = backend
     self.procs = []
     self.refs = {}
-    self.__extra = []
+    self.__extra = backend.arbextf
     Executer.__init__(self,code,self)
 
   def _invoke(self,event):
@@ -741,6 +744,7 @@ class ARBITER(Executer):
       self._invoke(event)
     else:
       for i in self.procs: i.invoke(event)
+      self._invoke(event)
 
   def registerReference(self,name,body):
     self.refs.update({name:body})
@@ -814,7 +818,6 @@ if __name__ == "__main__":
   invoke kill
   end
             """
-
   prog = a_lexer(prog_t)
   progd = prog[:]
   parser = backend.getParser()
