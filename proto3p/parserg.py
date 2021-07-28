@@ -496,7 +496,7 @@ def a_parse_single(itr,pps):
 
   for tok in model.initial:
     tmp = ia_comp_toks(itr,tok)
-    if tmp: outpars.append(tmp)
+    if tmp != None: outpars.append(tmp)
 
   #secondary parse
   for k,v in model.mods.items():
@@ -777,45 +777,9 @@ if __name__ == "__main__":
   #backend.loadModule(".\pclasses.py",True)
   prog_t = r"""
 
-  union msg
-
-  ref echoer [
-    register _ response REPLY
-    [
-      recieve REPLY reply
-      unpack reply host,reply
-      print pid,"recieved", reply
-      invoke msgsent ~
-      end
-    ]
-
-    print pid,"sending",dat
-    msg host ECHO data dat
-
-  ] using msg
-
-  ref server [
-
-    register host response ECHO [
-      single [
-        recieve ECHO dave
-        unpack dave sender, name
-        print "echoing",name,sender
-        msgv sender REPLY data name
-      ]
-    ]
-
-    await kill
-    end
-
-  ] using msg
-
-  create server
-  create echoer with dat = "Hello, World!"
-  create echoer with dat = "Goodbye, World."
-  await msgsent
-  await msgsent
-  invoke kill
+  union tkinter as  tk
+  setup single
+  ref e [] using tk
   end
             """
   prog = a_lexer(prog_t)
