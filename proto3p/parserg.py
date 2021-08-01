@@ -229,7 +229,7 @@ def a_lexer(txt):
       tmp += cc
       cc = next(itr,None)
     cc = next(itr,None)
-    return String(eval(f'"{tmp}"'))
+    return String(eval(f'"""{tmp}"""'))
   def eName():
     nonlocal itr,cc
     tmp = ""
@@ -642,13 +642,13 @@ class Executer: # base class for executing code
   def initialise(self,code):
     self.__delbuff.append([])
     
-    temp = code[:]
+    temp= code[:]
     for self.__ind,x in enumerate(temp):
       x.on_Init(self.arb,self)
      # print("INITIALISING",x,file=vf)
+     
     for o,i in enumerate(self.__delbuff[-1],0):
-      #print("\t"*len(self.__delbuff),"removing",i-o,temp[i-o],file=vf)
-      temp.pop(i-o)
+      del temp[i-o]
     self.__delbuff.pop()
     return temp
 
@@ -668,6 +668,7 @@ class Executer: # base class for executing code
     self.__curaci = 0 # current index to active equeue stack
     self.newprocedure(code)
     self.alive = True
+    self.__cesi,self.__onec = 0,[]
 
   def _getnext(self,ind=-1):
     #first search
@@ -683,7 +684,11 @@ class Executer: # base class for executing code
     if tmp == None:
       self._equeue[ind].pop()
       return self._getnext(ind)
-    else: return tmp
+    else:
+      if self.__cesi != ind:
+        self.__cesi = ind
+        for i in self.__onec:i(self)
+      return tmp
 
   def __next__(self):
     tmp = self._getnext()
@@ -692,6 +697,14 @@ class Executer: # base class for executing code
 
   def __iter__(self): return self
 
+  def getCurrentExecutionStackIndex(self):
+    "returns the index of the current execution stack"
+    return self.__cesi
+  def registerExecutionStackUpdateResponse(self,func):
+    """register functions to be called when the execution stack is updated
+(when the executor switches between execution stacks)"""
+    self.__onec.append(func)
+  
   def invoke(self,event):
     #print("PROCESS INVOKED",event)
     for i,x in enumerate(self._astack[:]):
@@ -776,10 +789,8 @@ if __name__ == "__main__":
   backend = Backend()
   #backend.loadModule(".\pclasses.py",True)
   prog_t = r"""
-
-  union tkinter as  tk
-  setup single
-  ref e [] using tk
+  print "Welcome to ARBITER
+  for all your multiprocessing needs"
   end
             """
   prog = a_lexer(prog_t)
@@ -788,8 +799,8 @@ if __name__ == "__main__":
   res = parser(prog)
   exe = ARBITER(res,backend)
   print(prog_t,sep="\n",file=vf)
-  #vf.print()
-  vf.cont = ""
+  vf.print()
+  #vf.cont = ""
   print("\n")
   while next(exe):
     #print(exe.env,*map(lambda x:x.env,exe.procs),sep="\n\t")

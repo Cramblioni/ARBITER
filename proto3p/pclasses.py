@@ -108,8 +108,8 @@ class c_event(BaseCommand):
   def on_Parse(self,backend):
     self.body = backend.getParser()(self.body)
   def on_Init(self,arb,proc):
-    proc.registerEvent(self.name.wrd,self.body)
     proc.releaseCurrent()
+    proc.registerEvent(self.name.wrd,self.body)
 
 @dataclass()
 class c_end(BaseCommand):
@@ -158,7 +158,7 @@ class c_unionise(BaseCommand):
   def on_Parse(self,backend):
     tmp = backend.extra.get(self.m_a.wrd)
     tmp += backend.extra.get(self.m_b.wrd)
-    backend.registerSet(self.m_n,tmp)
+    backend.registerSet(self.m_n.wrd,tmp)
   def on_init(self,arb,proc):
     proc.releaseCurrent()
 @dataclass()
