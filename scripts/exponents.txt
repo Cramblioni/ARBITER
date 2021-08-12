@@ -1,0 +1,25 @@
+
+# This is a simple and short program that calculates exponents (a**b in python)
+  This program will also demonstrate ARBITERs multiprocessing based paradigm   #
+
+ref exponent [
+  # this reference expects a and b to be preset #
+  
+  set c 1
+  await go
+  while b > 0 [
+    set c c * a
+    set b b - 1
+  ]
+  print name, c
+  end
+
+]
+
+
+
+create exponent with a = 2, b = 3, name = "dave"
+create exponent with a = 2, b = 5, name = "neil"
+print "the results are"
+invoke go
+end
