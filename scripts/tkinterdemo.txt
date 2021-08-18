@@ -1,0 +1,25 @@
+union tkinter
+
+using tkinter [
+  init single
+  
+  element input Entry [
+	grid 0 0
+	bind "<Return>" nlab
+  ]
+  element output Listbox [
+	grid 0 1 config rowspan = *20
+  ]
+]
+
+event nlab [
+  using tkinter [
+	call input "get" out ui
+	call input "delete" args *0, "end"
+	call output "insert" args "end", ui
+  ]
+]
+
+event WindowClosed [
+  end
+]

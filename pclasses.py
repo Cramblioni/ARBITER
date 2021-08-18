@@ -17,6 +17,12 @@ class exprProxy:
   def Solve(self,env):
     return self.value
 
+def prepInvoke(proc,event):
+  "generates a function that invokes an event locally"
+  if isinstance(proc,Arbiter):
+    return lambda *x: proc.invoke(event,"_")
+  else:
+    return lambda *x: proc.invoke(event)
 
 # Base ARBITER command classes
 
@@ -211,7 +217,8 @@ syntax = """
 
 modvars = {"BaseCommand":BaseCommand,
            "exprProxy":exprProxy,
-           "dataclass":dataclass}
+           "dataclass":dataclass,
+           "prepInvoke":prepInvoke}
 
 def module_init(backend):
   print("Base Module Loaded",file=backend.bout)

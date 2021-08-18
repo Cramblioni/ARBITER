@@ -196,12 +196,13 @@ class ARBITER: # working as backend aswell
   class UnOp:
     c:object ; op:str
     def Solve(self,env):
-      if self.op=="GET": return env.get(self.c)
-      elif self.op=="LIT":return self.c
+      if self.op  =="GET": return env.get(self.c)
+      elif self.op=="LIT": return self.c
       tmp = self.c.Solve(env)
       if   self.op == "+": return tmp.__pos__()
       elif self.op == "-": return tmp.__neg__()
       elif self.op == "!": return float(not bool(tmp))
+      elif self.op=="INT": return int(tmp)
   @dataclass()
   class BiOp:
     a:object ; b:object ; op:str
@@ -315,6 +316,9 @@ class ARBITER: # working as backend aswell
         tmp = logic()
         step()
         return tmp
+      elif ct.type is self.__enum.token and ct.lexeme == "*":
+        step()
+        return self.UnOp(single(),"INT")
 
     def mad():
       nonlocal ct
@@ -461,7 +465,7 @@ class ARBITER: # working as backend aswell
             params.append(tmp)
       else:
         params.extend([None]*len(v))
-    return output,params
+    return output,params,com.lineno
     
   def parse(self,text):
     tokstream = self.__lexer(text)
@@ -473,12 +477,13 @@ class ARBITER: # working as backend aswell
     out = []
     try:
       while itr.list:
-        obj,pars = self._parse_single(itr,commands,cobjl)
+        obj,pars,ln = self._parse_single(itr,commands,cobjl)
         tmp = obj(*pars) ; tmp.on_Parse(self)
+        tmp._lineno = ln
         out.append(tmp)
       return out
     except SyntaxError as e:
-      print(e.msg,file=self.bout)
+      raise SyntaxError(f"{e.msg} line {ln}")
     
   def getParser(self):
     return lambda x: self._parse(x,*self.APEL.buildEnv(*self.__ems[-1],arb=self.__am))
@@ -543,7 +548,7 @@ class Process:
   def initialise(self,toks):
     self._init_new(toks)
     for self._init_ind,x in enumerate(self._init_tks):
-      x.on_Init(self.arb,self) # primary initialise
+        x.on_Init(self.arb,self) # primary initialise
     for i in self._init_db[::-1]:#clearing
       del self._init_tks[i]
     for i,c in self._init_rb[::-1]:
@@ -661,13 +666,15 @@ class Arbiter(Process):
     self._refs = {}
     self.aout = sys.stdout
     self._procs = []
+    self._adf = []
 
     # simple expansion
     
 
   def registerReference(self,name,body):
     self._refs.update({name:body})
-
+  def registerDutyFunc(self,func):
+    self._adf.append(func)
   def _invoke(self,event):
     Process.invoke(self,event)
   def invoke(self,event,scope="*"):
@@ -684,8 +691,11 @@ class Arbiter(Process):
     self._procs.append(tmp)
     tmp._a_init(self._refs.get(ref)[:])
     
+  def releaseDutyFunc(self):
+    self._adf.remove(self._tmp)
   
   def __next__(self):
+    for self._tmp in self._adf[:]:self._tmp(self)
     if self._exec:
       tmp = self._getnext()
       if tmp: tmp.exec(self,self)
