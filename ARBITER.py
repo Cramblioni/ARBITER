@@ -12,33 +12,15 @@ pr.add_argument("-X",dest="ooae",action="store_const",const=False,default=True,h
 
 
 if __name__ == "__main__":
-  e = APEL()
-  b = ARBITER(e)
-  b.prog_load(r".\pclasses.py")
-  lex = lambda x: b._ARBITER__lexer(x)[0]
-  alex = lambda x:e._APEL__lexer(x)[0]
-  arb = Arbiter()
-  
-  def run(proc):
-    try:
-      while next(proc):pass
-    except KeyboardInterrupt: print("suspended execution",file=sys.stderr)
+  APELENV = APEL()
+  backend = ARBITER(APELENV)
+  backend.prog_load(r".\pclasses.py")
 
-  def extrc(proc):
-    out = []
-    for s in proc._equeue:
-      tmp = []
-      for i in s:
-        tmp.append(list(copy(i)))
-      out.append(tmp)
-    return out,proc.env,proc._events
-
-  def load(code):
-    arb._a_init(b.getParser()(lex(code)))
-    
-
-  globals().update(ns:=pr.parse_args().__dict__)
+  globals().update(pr.parse_args().__dict__)
   #print(ns)
-  with open(sdir) as f: load(f.read())
-  run(arb)
+  with open(sdir) as f: 
+    arb = backend._load(f.read())
+  if ooae: run(arb)
+  else: run(arb,lambda:print(arb.env,
+    *map(lambda x:x.env,arb._procs),sep="\n\t"))
   

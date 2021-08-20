@@ -234,7 +234,7 @@ class ARBITER: # working as backend aswell
                    "name"   : r"[a-zA-Z]+",
                    "number" : r"\d+(\.\d*)?",
                    "string" : r'".*?"',
-                   "token"  : r"[\*\+\-\\\._~\=\,\>\<\/]",
+                   "token"  : r"[\|\&\*\+\-\\\._~\=\,\>\<\/]",
                    "oparen" : r"\(",
                    "cparen" : r"\)",
                    "ocodbo" : r"\[",
@@ -512,6 +512,12 @@ class ARBITER: # working as backend aswell
     else:
       raise ImportError(f"Module {name} Not Found")
     
+  def _load(self,code):
+    ltok = self.__lexer(code)[0]
+    ptok = self.getParser()(ltok)
+    out = Arbiter()
+    out._a_init(ptok)
+    return out
 # Stuff to do with actually executing code
 
 class re_iter:
@@ -617,8 +623,8 @@ class Process:
     else: return None
 
     if si != self._csfeq:
-      for i in self._esur:i(self)
       self._csfeq = si
+      for i in self._esur:i(self)
 
     try:ss = self._equeue[si]
     except IndexError: return None
@@ -690,6 +696,7 @@ class Arbiter(Process):
     tmp = Process(self,iev)
     self._procs.append(tmp)
     tmp._a_init(self._refs.get(ref)[:])
+    tmp._from = ref
     
   def releaseDutyFunc(self):
     self._adf.remove(self._tmp)
@@ -708,6 +715,15 @@ class Arbiter(Process):
 
     return self._exec or bool(self._procs)
 
+def run(proc,func=None):
+    try:
+      if func:
+        func()
+        while next(proc): func()
+      else:
+        while next(proc):pass
+    except KeyboardInterrupt: print("suspended execution",file=sys.stderr)
+
 if __name__ == "__main__":
   e = APEL()
   b = ARBITER(e)
@@ -716,10 +732,7 @@ if __name__ == "__main__":
   alex = lambda x:e._APEL__lexer(x)[0]
   arb = Arbiter()
   
-  def run(proc):
-    try:
-      while next(proc):pass
-    except KeyboardInterrupt: print("suspended execution",file=sys.stderr)
+  
 
   def extrc(proc):
     out = []

@@ -17,10 +17,10 @@ class exprProxy:
   def Solve(self,env):
     return self.value
 
-def prepInvoke(proc,event):
-  "generates a function that invokes an event locally"
+def prepInvoke(proc,event,scope="_"):
+  "generates a function that invokes an event [shallow]"
   if isinstance(proc,Arbiter):
-    return lambda *x: proc.invoke(event,"_")
+    return lambda *x: proc.invoke(event,scope)
   else:
     return lambda *x: proc.invoke(event)
 
@@ -191,6 +191,64 @@ class env_test(BaseCommand):
     backend.unsetParserSet()
   def on_Init(self,arb,proc):
     proc.replaceCurrent(self.body)
+
+@dataclass()
+class c_env_watchdog(BaseCommand):
+  trigger:object
+  response:list
+  then:list
+  def _tst(self,arb):
+    env = {"procn":len(arb._procs),
+           "running":float(arb._exec),
+           **arb.env}
+    return self.trigger.Solve(env)
+    
+  def _func_d(self,arb):
+    if self._tst(arb):
+      tmp = arb.newprocedure(self.response)
+      arb.flush(tmp)
+      arb.releaseDutyFunc()
+  def _func_c(self,arb):
+    if self._tst(arb):
+      tmp = arb.newprocedure(self.response)
+      arb.flush(tmp)
+      arb.newprocedure(self.then)
+  def _func_dc(self,arb):
+    if self._tst(arb):
+      tmp = arb.newprocedure(self.response)
+      arb.flush(tmp)
+      arb.releaseDutyFunc()
+      arb.newprocedure(self.then)
+  def _func(self,arb):
+    if self._tst(arb):
+      tmp = arb.newprocedure(self.response)
+      arb.flush(tmp)
+      
+  def on_Parse(self,backend):
+    self._prev = 0
+    parser = backend.getParser()
+    self.response = parser(self.response)
+    if isinstance(self.then,list):
+      self.then = parser(self.then)
+    elif self.then == None:pass
+    elif self.then.lexeme == "release":
+      self._destroy = True
+      self.then = None
+    else: self.then = None
+  
+  def on_Init(self,arb,proc):
+    proc.releaseCurrent()
+    if self._destroy:
+      if self.then:
+        arb.registerDutyFunc(self._func_dc)
+      else:
+        arb.registerDutyFunc(self._func_d)
+    else:
+      if self.then:
+        arb.registerDutyFunc(self._func_c)
+      else:
+        arb.registerDutyFunc(self._func)
+    
 # ARBITER module requirements
 
 syntax = """
@@ -212,6 +270,7 @@ syntax = """
   create:&:with[&~=*];
   union:&:as&;
   see:[*];
+  watchdog:*£:then&£|;<bind watchdog c_env_watchdog>
 """
 
 
